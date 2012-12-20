@@ -846,3 +846,5 @@ proc request {nick uhost hand chan arg} {
 		}
 	}
 }
+
+putlog "Shoutcast.tcl loaded.."

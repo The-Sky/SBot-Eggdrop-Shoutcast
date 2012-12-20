@@ -97,4 +97,4 @@ proc maketiny {url nick chan} {
 	putlog "tinyurl failed for $nick: $user_url"
 }
 
-putlog "Url Title Grabber $urltitlever (rosc) script loaded.."
+putlog "Urltitle.tcl loaded.."

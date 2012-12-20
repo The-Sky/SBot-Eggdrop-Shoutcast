@@ -82,3 +82,5 @@ proc takecookie { nick uhost hand chan arg} {
 		}
 	}
 }
+
+putlog "Cookies.tcl loaded.."
