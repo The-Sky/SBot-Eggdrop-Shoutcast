@@ -20,6 +20,8 @@ set urltitle(timeout) 60000 ;# geturl timeout (1/1000ths of a second)
 # Script begins:
 
 package require http ;# You need the http package..
+package require tls
+
 set urltitle(last) 111 ;# Internal variable, stores time of last eggdrop use, don't change..
 setudef flag urltitle ;# Channel flag to enable script.
 setudef flag logurltitle ;# Channel flag to enable logging of script.
@@ -32,10 +34,12 @@ proc pubm:urltitle {nick host user chan text} {
 	global urltitle this message
 	set response ""
 	if {$nick != "Hobbes"} {
-		if {([channel get $chan urltitle]) && ([expr [unixtime] - $urltitle(delay)] > $urltitle(last)) && \
-				(![matchattr $user $urltitle(ignore)])} {
+		if {([channel get $chan urltitle]) && ([expr [unixtime] - $urltitle(delay)] \
+		> $urltitle(last)) && (![matchattr $user $urltitle(ignore)])} {
 			foreach word [split $text] {
-				if {[string length $word] >= $urltitle(length) && [regexp {^(f|ht)tp(s|)://} $word] && ![regexp {://([^/:]*:([^/]*@|\d+(/|$))|.*/\.)} $word]} {
+				if {[string length $word] >= $urltitle(length) && \
+				[regexp {^(f|ht)tp(s|)://} $word] \
+				&& ![regexp {://([^/:]*:([^/]*@|\d+(/|$))|.*/\.)} $word]} {
 						if {![string match {*torrent-invites.com*} $word]} {
 						set urltitle(last) [unixtime]
 						set urtitle [urltitle $word]
@@ -61,6 +65,9 @@ proc pubm:urltitle {nick host user chan text} {
 proc urltitle {url} {
 	global this
 	if {[info exists url] && [string length $url]} {
+		if {[string match -nocase "*https*" $url]} {
+			http::register https 443 tls::socket
+		}
 		set this $url
 		catch {set http [::http::geturl $url -timeout $::urltitle(timeout)]} error
 		if {[string match -nocase "*couldn't open socket*" $error]} {
@@ -77,6 +84,7 @@ proc urltitle {url} {
 		} else {
 			return "No title found."
 		}
+		http::unregister https
 	}
 }
 
