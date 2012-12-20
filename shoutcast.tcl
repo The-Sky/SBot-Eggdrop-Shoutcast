@@ -809,8 +809,12 @@ proc request {nick uhost hand chan arg} {
 			putnow "PRIVMSG $chan :\002Syntax\002: !request <Artist - Title>"
 		} else {
 			if {[string match *Bieber* $arg] || [string match *Beiber* $arg]} {
-				putnow "PRIVMSG $chan :Troll Alert!"
-				putkick $chan $nick "Stop trolling.."
+				if {[isop $nick $chan] == 1 || [ishalfop $nick $chan] == 1} {
+					putnow "PRIVMSG $chan :Troll Alert!"
+				} else {
+					putnow "PRIVMSG $chan :Troll Alert!"
+					putkick $chan $nick "Stop trolling.."
+				}
 			} else {
 				set reqitem $arg
 				requestproc $reqitem
