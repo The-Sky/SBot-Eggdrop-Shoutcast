@@ -21,7 +21,7 @@ set urltitle(last) 111 ;# Internal variable, stores time of last eggdrop use, do
 # Script begins:
 
 package require http ;# You need the http package..
-package require tls
+package require tls 
 
 setudef flag urltitle ;# Channel flag to enable script.
 setudef flag logurltitle ;# Channel flag to enable logging of script.
@@ -34,20 +34,16 @@ proc pubm:urltitle {nick host user chan text} {
 		if {([channel get $chan urltitle]) && (![matchattr $user $urltitle(ignore)]) \
 		&& $nick != "Hobbes"} {
 			foreach word [split $text] {
-				# If the link is long enough
 				if {[string length $word] >= $urltitle(length) && \
-				# If theere is http in the url
 				[regexp {^(f|ht)tp(s|)://} $word] \
-				# Some other stuff.
 				&& ![regexp {://([^/:]*:([^/]*@|\d+(/|$))|.*/\.)} $word]} {
-					# If TI is in the url
 					if {![string match {*torrent-invites.com*} $word]} {
 						set urltitle(last) [unixtime]
 					# Run urltitle on our url in $word
 					set urtitle [urltitle $word]
 					if {[string length $urtitle]} {
 						# Merge pasted url with HideMyAss Anon Refer
-						set message "http://hidemyass.com/?$word"
+						set message "http://blankrefer.com/?$word"
 						# Remove Blank Space
 						string trim $message
 						# Make the Tiny Url
