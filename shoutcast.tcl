@@ -1,7 +1,7 @@
 ##########################################################################
-## ##
-## Torrent-Invites Radio Bot ##
-## ##
+## 																		##
+## 						Torrent-Invites Radio Bot 						##
+##                                                                      ##
 ##########################################################################
 
 
@@ -48,6 +48,7 @@ proc stop {} {
 ## Refreshing bot resets timers ##
 ####################################
 
+
 proc start {} {
 	global test
 	if {[hasTimers] == 0} {
@@ -63,9 +64,11 @@ proc start {} {
 		run_periodically #Torrent-Invites
 		#Starting Delete Request Timer
 		deletereq
+		set firstad 0
 	} else {
 		putnow "PRIVMSG $test :It Seems You Rehashed Me Master."
 		putnow "PRIVMSG $test :Timer Active Already. Killing Active Timer Now."
+		# Stop All Timers
 		stop
 		putnow "PRIVMSG $test :Activating Timer Now"
 		#Starting Check DJ Timer
@@ -78,6 +81,7 @@ proc start {} {
 		run_periodically #TI-Radio
 		#Starting Delete Request Timer
 		deletereq
+		set firstad 0
 	}
 }
 
@@ -99,17 +103,17 @@ proc run_periodically {chan} {
 			if {[regexp {<font class=default>Stream Title: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
 				set dj $title
 			} else {
-				unset dj
+				catch {unset dj}
 			}
 			if {[regexp {<font class=default>Stream Genre: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
 				set genre $title
 			} else {
-				unset genre
+				catch {unset genre}
 			}
 			if {[regexp {<font class=default>Current Song: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
 				set song $title
 			} else {
-				unset song
+				catch {unset song}
 			}
 			if {$firstad != 0} {
 				if {$dj == "TI-Radio AutoDj" || $song == 0 || $dj == 0 || $dj == 0} {
@@ -117,21 +121,27 @@ proc run_periodically {chan} {
 				} else {
 					if {[string match *c* [lindex [split [getchanmode $chan]] 0]]} {
 						set a "\002$dj is live on the TI-Radio\002 || \002Genre\002: $genre || "
-						set b  "\002Now Playing \002: $song || \002Listen @ $playlist \002"
+						set b  "\002Now Playing\002: $song || \002Listen @ $playlist \002"
 						putnow "PRIVMSG $chan : $a$b"
+						incr firstad
 					} else {
 						set c "\002\00303$dj is live on the TI-Radio\002\00303\00307 ||  "
-						set d "\00307\003\002Genre\002: $genre \003\00307|| \00307\003\002Now Playing "
+						set d "\00307\003\002Genre\002: $genre \003\00307|| \00307\003\002Now Playing"
 						set e "\002: $song \003\00307||\00307 \003\00304\002 Listen @ $playlist \002\00304"
 						putnow "PRIVMSG $chan : $c$d$e"
+						incr firstad
 					}
 				}
-			} else {
-				set firstad 1
+			} 	
 			}
 		}
 		return 1;
 	}
+
+proc idlerpg {chan} {
+	timer 10 [list idlerpg #TI-Radio]
+	putnow "PRIVMSG #Idlerpg :\002Registrations have started! Please register and play :)\002"
+	putnow "PRIVMSG #Idlerpg :Please do not be discouraged by starting times. The system is chaotic enough that you could start a few days late and still win. "
 }
 
 ####################################
@@ -206,11 +216,12 @@ proc checkdj {} {
 			if {[djauto]} {
 				#Auto DJ -> Offline
 				serveroffline
-				unset dj
+				catch {unset dj}
 			} elseif {![isautodj $newdj]} {
 				#Real DJ -> Offline
 				offair
-				unset dj
+				finishsave $dj
+				catch {unset dj}
 			}
 		}
 		return
@@ -221,27 +232,35 @@ proc checkdj {} {
 		if {![isautodj $newdj]} {
 			#Offline -> Real DJ
 			onair
+			set dj $newdj
+			startsave $dj
 		} else {
 			#Offline -> Auto DJ
+			set dj $newdj
 			autodjon
 		}
 	} elseif {$dj != $newdj} {
 		# Generic state change
 		if {[djauto]} {
 			#AutoDJ -> Real DJ
+			set dj $newdj
+			startsave $dj
 			onair
 		} elseif {[isautodj $newdj]} {
 			#Real DJ -> AutoDJ
+			finishsave $dj
 			autooffair
+			set dj $newdj
 		} else {
 			#Real DJ -> Real DJ
 			tempoffair
+			finishsave $dj
 			set dj $newdj
+			startsave $dj
 			onair
 		}
 	}
-	set dj $newdj
-	return 1;
+	return
 }
 
 ####################################
@@ -327,7 +346,7 @@ proc autodjon {} {
 	global streamch djch userair djcheck dj main
 	set streamch [string tolower $streamch]
 	set a "Torrent-Invites Radio || Status: AutoDJ ||"
-	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN" 
+	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
 	putnow "TOPIC $streamch : $a$b"
 }
 
@@ -462,7 +481,7 @@ proc deletereq {} {
 	set data [read -nonewline $fp]
 	set lines [split $data "\n"]
 	close $fp
-	set line_to_delete [expr [llength $lines] - 1]
+	set line_to_delete [expr {[llength $lines] - 1}]
 	set lines [lreplace $lines $line_to_delete $line_to_delete]
 	set fp [open $filename w+]
 	if {[gets $fp data] >= 1} {
@@ -529,12 +548,12 @@ proc starttimers {nick uhost hand chan arg} {
 
 bind pub -|- !rehash prehash
 proc prehash {nick uhost hand chan arg} {
-	global djch
-	if {$chan == $djch} {
+	global djch test
+	if {$chan == $djch || $chan == $test} {
 		if {[isop $nick $djch] == 1 || [ishalfop $nick $djch] == 1} {
 			putserv "PRIVMSG $chan :$nick rehashed me."
 			putlog "$nick rehashed the bot"
-			[rehash]
+			rehash
 		}
 	}
 }
@@ -543,8 +562,8 @@ proc prehash {nick uhost hand chan arg} {
 ## Command to Show Now Playing ##
 ####################################
 
-bind pub -|- !np song
-proc song {nick uhost hand chan arg} {
+bind pub -|- !np nowplaying
+proc nowplaying {nick uhost hand chan arg} {
 	global siteurl streamch dj djch main
 	set streamch [string tolower $streamch]
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
@@ -609,7 +628,7 @@ proc login {nick uhost hand chan arg} {
 		if {[isop $nick $djch] == 1 || [ishalfop $nick $djch] == 1} {
 			putnow "NOTICE $nick : URL: http://panel5.hostingmembercenter.com"
 			putnow "NOTICE $nick : Username: grjwalfd"
-			putnow "NOTICE $nick : Password: tiradiorocksme"
+			putnow "NOTICE $nick : Password: password"
 		} else {
 			putnow "NOTICE $nick :Sorry $nick, but you're not a halfop or greater in #DJ."
 		}
@@ -636,8 +655,8 @@ proc site {nick uhost hand chan arg} {
 ## Command to get Server Info ##
 ####################################
 
-bind pub -|- !server servers
-proc servers {nick uhost hand chan arg} {
+bind pub -|- !server serverinfo
+proc serverinfo {nick uhost hand chan arg} {
 	global siteurl streamch djch main
 	set streamch [string tolower $streamch]
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
@@ -649,9 +668,9 @@ proc servers {nick uhost hand chan arg} {
 	::http::cleanup $http_req
 	if {[regexp {<font class=default>Server Status: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
 		if {$chan != $main} {
-			putnow "PRIVMSG $chan :\ 002Server \002: $title"
+			putnow "PRIVMSG $chan :\  002Server  \002: $title"
 		} else {
-			putnow "PRIVMSG $nick :\ 002Server \002: $title"
+			putnow "PRIVMSG $nick :\  002Server  \002: $title"
 		}
 	} else {
 		if {$chan != $main} {
@@ -693,39 +712,6 @@ proc genre {nick uhost hand chan arg} {
 }
 
 ####################################
-## Command to get Server Status ##
-####################################
-
-bind pub -|- !status status
-proc status {nick uhost hand chan arg} {
-	global siteurl streamch djch main
-	set streamch [string tolower $streamch]
-	::http::config -useragent "Mozilla/5.0; Shoutinfo"
-	set http_req [::http::geturl $siteurl -timeout 2000]
-	if {[::http::status $http_req] != "ok"} {
-		putnow "PRIVMSG $chan :Stream is unavailable";
-	}
-	set data [::http::data $http_req]
-	::http::cleanup $http_req
-	if {[regexp {B>([^<]+) of} $data x title]} {
-		regexp { of ([^<]+) listeners} $data x title2
-		regexp {listeners ([^<]+)} $data x title3
-		regexp {Stream is up at ([^<]+) with} $data x title4
-		if {$chan != $main} {
-			putnow "PRIVMSG $chan :\002Status\002: $title of $title2 $title3 at $title4"
-		} else {
-			putnow "NOTICE $nick :\002Status\002: $title of $title2 $title3 at $title4"
-		}
-	} else {
-		if {$chan != $main} {
-			putnow "PRIVMSG $chan :Couldn't receive any information, checking server status..."
-		} else {
-			putnow "NOTICE $nick :Couldn't receive any information, checking server status..."
-		}
-	}
-}
-
-####################################
 ## Command to get Peak Info ##
 ####################################
 
@@ -734,7 +720,7 @@ proc peak {nick uhost hand chan arg} {
 	global siteurl streamch djch main
 	set streamch [string tolower $streamch]
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
-	set http_req [::http::geturl $siteurl -timeout 2000]
+	set http_req [::http::geturl $siteurl -timeout 20000]
 	if {[::http::status $http_req] != "ok"} {
 		putnow "PRIVMSG $chan :Stream is unavailable";
 	}
@@ -781,17 +767,17 @@ proc commands {nick uhost hand chan arg} {
 			set a "\002DJ/Admin Commands\002: !rehash !start !login "
 			set b "+cookie -cookie !reqlist !clearlist"
 			set c "\002Radio Commands\002: !listen !np !lp !dj !peak"
-			set d "!request !status !genre !server"
+			set d "!request !genre !server !topdj"
 			putnow "PRIVMSG $chan : $a$b"
 			putnow "PRIVMSG $chan : $c$d"
 		} else {
 			set e "\002Radio Commands\002: !listen !np !lp !dj !peak "
-			set f "!request !status !genre !server"
+			set f "!request !genre !server !topdj"
 			putnow "PRIVMSG $chan : $e$f"
 		}
 	} else {
-		set g "\002Radio Commands\002: !listen !np !lp !dj !peak "  
-		set h "!request !status !genre !server"
+		set g "\002Radio Commands\002: !listen !np !lp !dj !peak "
+		set h "!request !genre !server !topdj"
 		putnow "NOTICE $nick : $g$h"
 	}
 }
@@ -809,7 +795,7 @@ proc request {nick uhost hand chan arg} {
 			putnow "PRIVMSG $chan :\002Syntax\002: !request <Artist - Title>"
 		} else {
 			if {[string match *Bieber* $arg] || [string match *Beiber* $arg]} {
-				if {[isop $nick $chan] == 1 || [ishalfop $nick $chan] == 1} {
+				if {[isop $nick $chan] || [ishalfop $nick $chan]} {
 					putnow "PRIVMSG $chan :Troll Alert!"
 				} else {
 					putnow "PRIVMSG $chan :Troll Alert!"
@@ -847,4 +833,305 @@ proc request {nick uhost hand chan arg} {
 	}
 }
 
-putlog "Shoutcast.tcl loaded.."
+####################################
+##     !log DJ Log Information    ##
+####################################
+
+bind pub -|- !log getlog
+proc getlog {nick uhost hand chan arg} {
+	set m [mysqlconnect -user root -db username -password password]
+	if {[llength $arg]==0} {
+		set tt_query "SELECT total_time from djlog where dj_name='$nick'"
+		set ts_query "SELECT total_sessions from djlog where dj_name='$nick'"
+		set log_name $nick
+	} else {
+		set tt_query "SELECT total_time from djlog where dj_name='$arg'"
+		set ts_query "SELECT total_sessions from djlog where dj_name='$arg'"
+		set log_name $arg
+	}
+	set tt_result [mysqlsel $m $tt_query -list]
+	set ts_result [mysqlsel $m $ts_query -list]
+	if {$ts_result  != "" && $tt_result != "" } {
+		set total_time [lindex $tt_result 0]
+		set total_sessions [lindex $ts_result 0]
+		set total_time [expr {$total_time*1}]
+		set totalt [duration $total_time]
+		putnow "PRIVMSG $chan : $log_name has been on air a total of $total_sessions times for $totalt."
+	} else {
+		putnow "PRIVMSG $chan : Sorry but $arg was not found in the log."
+	}
+}
+
+####################################
+##  First Save: Name + Onair Time ##
+####################################
+
+proc startsave {dj} {
+	set start_time [clock seconds]
+	set m [mysqlconnect -user root -db username -password password]
+	set query "SELECT dj_name from session_log order by ID desc limit 1"
+	set result [mysqlsel $m $query -list]
+	set testname [lindex $result 0]
+	putnow "PRIVMSG #BotDev : $testname"
+	set testquery "SELECT offair_time from session_log order by ID desc limit 1"
+	set testresult [mysqlsel $m $testquery -list]
+	set testtime [lindex $testresult 0]
+	putnow "PRIVMSG #BotDev : $testtime"
+	if {$testtime != "{}" && $testname != $dj} {
+		#####
+		### session_log
+		######
+		set query "INSERT INTO session_log(dj_name, onair_time) VALUES('$dj', '$start_time')"
+		set result [mysqlexec $m $query]
+		######
+		### djlog
+		######
+		set query "SELECT dj_name from djlog where dj_name='$dj'"
+		set result [mysqlsel $m $query -list]
+		set dj_name [lindex $result 0]
+		if {$dj_name != ""} {
+			set query "SELECT total_sessions from djlog where dj_name='$dj'"
+			set result [mysqlsel $m $query -list]
+			set total_sessions [lindex $result 0]
+			incr total_sessions
+			set query "UPDATE djlog set total_sessions=$total_sessions where dj_name='$dj'"
+			set result [mysqlexec $m $query]
+		} else {
+			set query "INSERT INTO djlog(dj_name, total_sessions) VALUES('$dj', '1')"
+			set result [mysqlexec $m $query]
+		}
+		if {$result} {
+			putlog "DJ Database Entry Sent. $dj with $start_time"
+		} else {
+			putlog "Database error."
+		}
+		mysqlclose $m
+	} elseif {$testname == $dj && $testtime != "{}"} {
+				#####
+		### session_log
+		######
+		set query "INSERT INTO session_log(dj_name, onair_time) VALUES('$dj', '$start_time')"
+		set result [mysqlexec $m $query]
+		######
+		### djlog
+		######
+		set query "SELECT dj_name from djlog where dj_name='$dj'"
+		set result [mysqlsel $m $query -list]
+		set dj_name [lindex $result 0]
+		if {$dj_name != ""} {
+			set query "SELECT total_sessions from djlog where dj_name='$dj'"
+			set result [mysqlsel $m $query -list]
+			set total_sessions [lindex $result 0]
+			incr total_sessions
+			set query "UPDATE djlog set total_sessions=$total_sessions where dj_name='$dj'"
+			set result [mysqlexec $m $query]
+		} else {
+			set query "INSERT INTO djlog(dj_name, total_sessions) VALUES('$dj', '1')"
+			set result [mysqlexec $m $query]
+		}
+		if {$result} {
+			putlog "DJ Database Entry Sent. $dj with $start_time"
+		} else {
+			putlog "Database error."
+		}
+		mysqlclose $m
+	} elseif {$testname == $dj && $testtime == "{}"} {
+		putnow "PRIVMSG #DJ :$dj is already in a session."
+	}
+}
+
+
+####################################
+## Second: Offair, Session, Total ##I'd 
+####################################
+
+proc finishsave {dj} {
+	set end_time [clock seconds]
+	set m [mysqlconnect -user root -db username -password password]
+	# Checking out the Top-Row's DJ Name
+	set query "SELECT dj_name from session_log order by ID desc limit 1"
+	set result [mysqlsel $m $query -list]
+	set dj_name [lindex $result 0]
+	set testquery "SELECT offair_time from session_log order by ID desc limit 1"
+	set testresult [mysqlsel $m $testquery -list]
+	set testtime [lindex $testresult 0]
+	# If Our Arg is equal to DJ Name in Top Row
+	if {$dj == $dj_name && $testtime == "{}"} {
+		# Read when this person logged on-air
+		set query "SELECT onair_time from session_log order by ID desc limit 1"
+		set result [mysqlsel $m $query -list]
+		set onair_time [lindex $result 0]
+		# Calculate the session-time
+		set session_time [expr {$end_time - $onair_time}]
+		# Set session-time
+		set query "UPDATE session_log set session_time=$session_time order by ID desc limit 1"
+		set result [mysqlexec $m $query]
+		# Set Offair-time
+		set query "UPDATE session_log set offair_time=$end_time order by ID desc limit 1"
+		set result [mysqlexec $m $query]
+		######
+		### djlog
+		######
+		
+		# Read Total Time
+		set query "SELECT total_time from djlog where dj_name='$dj'"
+		set result [mysqlsel $m $query -list]
+		set total_time [lindex $result 0]
+		# This needs to be fixed or two tables created
+		if {$total_time != "{}"} {
+			set newtotal_time [expr {$total_time + $session_time}]
+		} else {
+			set newtotal_time $session_time
+		}
+		# Set New Total Time
+		if {$session_time >= 600} {
+			set query "UPDATE djlog set total_time=$newtotal_time where dj_name='$dj'"
+			set result [mysqlexec $m $query]
+			putnow "PRIVMSG #dj : Session Time: $session_time Total Time: $newtotal_time"
+		} else {
+			putnow "PRIVMSG #dj : $dj, your session was less than 10 minutes, thus your time was not recorded."
+		}
+		if {$result} {
+			putlog "DJ Database Entry Sent. $dj with $session_time and $newtotal_time"
+		} else {
+			putlog "Database error."
+		}
+	} else {
+		putnow "PRIVMSG #dj :$dj, you never went on-air, thus your time was not recorded."
+	}
+}
+
+####################################
+##     Top 5 or $arg of DJ Log    ##
+####################################
+
+bind pub -|- !topdj toplog
+proc toplog {nick uhost hand chan arg} {
+	set m [mysqlconnect -user root -db username -password password]
+	set name_query "SELECT dj_name from djlog order by total_time desc"
+	set name_result [mysqlsel $m $name_query -list]
+	set tt_query "SELECT total_time from djlog order by total_time desc"
+	set ts_query "SELECT total_sessions from djlog order by total_time desc"
+	set ts_result [mysqlsel $m $ts_query -list]
+	set tt_result [mysqlsel $m $tt_query -list]
+	set i 0
+	set n 1
+	if {[llength $arg]==0} {
+		putnow "PRIVMSG $chan : Top 5 DJ Log"
+		while {$i < 5} {
+			set name [lindex $name_result $i]
+			set total_time [lindex $tt_result $i]
+			set total_sessions [lindex $ts_result $i]
+			set total_time [expr {$total_time*1}]
+			set total_time [duration $total_time]
+			putnow "PRIVMSG $chan : #$n: $name with $total_time on-air and $total_sessions sessions."
+			incr i
+			incr n
+		}
+	} else {
+		putnow "PRIVMSG $chan : Top $arg DJ Log"
+		while {$i <= $arg} {
+			set name [lindex $name_result $i]
+			set total_time [lindex $tt_result $i]
+			set total_sessions [lindex $ts_result $i]
+			set total_time [expr {$total_time*1}]
+			set total_time [duration $total_time]
+			putnow "PRIVMSG $chan : #$n: $name with $total_time on-air and $total_sessions sessions."
+			incr i
+			incr n
+		}
+	}
+}
+
+bind pub -|- !lst lastsessions
+proc lastsessions {nick uhost hand chan arg} {
+	set m [mysqlconnect -user root -db username -password password]
+	set name_query "SELECT dj_name from session_log order by id desc"
+	set name_result [mysqlsel $m $name_query -list]
+	set on_query "SELECT onair_time from session_log order by id desc"
+	set off_query "SELECT offair_time from session_log order by id desc"
+	set on_result [mysqlsel $m $on_query -list]
+	set off_result [mysqlsel $m $off_query -list]
+	set session_query "SELECT session_time from session_log order by id desc"
+	set session_result [mysqlsel $m $session_query -list]
+	set i 0
+	set n 1
+	if {[llength $arg]==0} {
+		putnow "PRIVMSG $chan : Last 5 DJ Sessions"
+		while {$i < 5} {
+			set name [lindex $name_result $i]
+			set onairs [lindex $on_result $i]
+			set offairs [lindex $off_result $i]
+			set session_time [lindex $session_result $i]
+			putnow "PRIVMSG $chan : #$n: $name with $onairs on-air and $offairs offair and $session_time session time."
+			incr i
+			incr n
+		}
+	} else {
+		putnow "PRIVMSG $chan : Last $arg DJ Sessions"
+		while {$i <= $arg} {
+			set name [lindex $name_result $i]
+			set onairs [lindex $on_result $i]
+			set offairs [lindex $off_result $i]
+			set session_time [lindex $session_result $i]
+			putnow "PRIVMSG $chan : #$n: $name with $onairs on-air and $offairs offair and $session_time session time."
+			incr i
+			incr n
+		}
+	}
+}
+####################################
+##  Calculate Seconds to D:H:M:S  ##
+####################################
+
+proc duration { int_time } {
+	set timeList [list]
+	foreach div {604800 86400 3600 60 1} mod {0 7 24 60 60} name {wk day hr min sec} {
+		set n [expr {$int_time / $div}]
+		if {$mod > 0} {set n [expr {$n % $mod}]}
+		if {$n > 1} {
+			lappend timeList "$n ${name}s"
+		} elseif {$n == 1} {
+			lappend timeList "$n $name"
+		}
+	}
+	return [join $timeList]
+}
+
+bind pub -|- !duration duracommand
+proc duracommand {nick uhost hand chan arg} {
+	if {!$arg} {
+	} else {
+		set timeList [list]
+		foreach div {604800 86400 3600 60 1} mod {0 7 24 60 60} name {wk day hr min sec} {
+			set n [expr {$arg / $div}]
+			if {$mod > 0} {set n [expr {$n % $mod}]}
+			if {$n > 1} {
+				lappend timeList "$n ${name}s"
+			} elseif {$n == 1} {
+				lappend timeList "$n $name"
+			}
+		}
+		set duration [join $timeList]
+		putnow "PRIVMSG $chan :$duration"
+	}
+}
+
+bind pub -|- !math math_operands
+proc math_operands {nick uhost hand chan arg} {
+	if {$chan != "#Torrent-Invites"} {
+		if {$arg == "operands"} {
+			putnow "PRIVMSG $chan : Subtract: -  \002|\002 Add: + \002|\002 Bit-Wise NOT: ~ \002|\002 Logical NOT: ! \002|\002"
+			putnow "PRIVMSG $chan : Multiply: * \002|\002 Divide: / \002|\002 Remainder: % \002|\002 Exponent: **  \002|\002 Example: 2**4 \002|\002"
+			putnow "PRIVMSG $chan : Less: < \002|\002 Greater: > \002|\002 Less than or Equal: <= \002|\002 Greater than or Equal: >= \002|\002"
+			putnow "PRIVMSG $chan : Bitwise AND: & \002|\002 Bitwise Exclusive OR: ^ \002|\002 Bitwise OR: | \002|\002 And: && \002|\002 OR: || \002|\002 "
+		} elseif {$arg == "functions"} {
+			putnow "PRIVMSG $chan : abs acos asin atan atan2 bol ceil cos cosh double entier exp floor "
+			putnow "PRIVMSG $chan : fmod hypot int isqrt log log10 max min pow rand round "
+			putnow "PRIVMSG $chan : sin sinh sqrt srand tan tanh wide"
+		}
+	}
+}
+
+putlog "Radio Script loaded..        | 1"
+start
