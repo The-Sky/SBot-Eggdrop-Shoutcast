@@ -42,7 +42,7 @@ proc stop {} {
 	foreach timer $timerList {
 		killtimer [lindex $timer 2];
 	}
-}
+
 
 ####################################
 ## Refreshing bot resets timers ##
@@ -52,7 +52,6 @@ proc stop {} {
 proc start {} {
 	global test
 	if {[hasTimers] == 0} {
-		putnow "PRIVMSG $test :It Seems You Rehashed Me Master."
 		putnow "PRIVMSG $test :No Timers Active. Activating Timer Now."
 		#Starting Check DJ Timer
 		checkdj
@@ -66,9 +65,8 @@ proc start {} {
 		deletereq
 		set firstad 0
 	} else {
-		putnow "PRIVMSG $test :It Seems You Rehashed Me Master."
 		putnow "PRIVMSG $test :Timer Active Already. Killing Active Timer Now."
-		# Stop All Timers
+		# Stop All Timers 2
 		stop
 		putnow "PRIVMSG $test :Activating Timer Now"
 		#Starting Check DJ Timer
@@ -626,9 +624,9 @@ proc login {nick uhost hand chan arg} {
 	global test djch main
 	if {$chan == $djch} {
 		if {[isop $nick $djch] == 1 || [ishalfop $nick $djch] == 1} {
-			putnow "NOTICE $nick : URL: http://panel5.hostingmembercenter.com"
-			putnow "NOTICE $nick : Username: grjwalfd"
-			putnow "NOTICE $nick : Password: password"
+			putnow "NOTICE $nick : URL: asd"
+			putnow "NOTICE $nick : Username: asd"
+			putnow "NOTICE $nick : Password: asd"
 		} else {
 			putnow "NOTICE $nick :Sorry $nick, but you're not a halfop or greater in #DJ."
 		}
@@ -839,7 +837,7 @@ proc request {nick uhost hand chan arg} {
 
 bind pub -|- !log getlog
 proc getlog {nick uhost hand chan arg} {
-	set m [mysqlconnect -user root -db username -password password]
+	set m [mysqlconnect -user username -db database -password password]
 	if {[llength $arg]==0} {
 		set tt_query "SELECT total_time from djlog where dj_name='$nick'"
 		set ts_query "SELECT total_sessions from djlog where dj_name='$nick'"
@@ -868,7 +866,7 @@ proc getlog {nick uhost hand chan arg} {
 
 proc startsave {dj} {
 	set start_time [clock seconds]
-	set m [mysqlconnect -user root -db username -password password]
+	set m [mysqlconnect -user username -db database -password password]
 	set query "SELECT dj_name from session_log order by ID desc limit 1"
 	set result [mysqlsel $m $query -list]
 	set testname [lindex $result 0]
@@ -947,7 +945,7 @@ proc startsave {dj} {
 
 proc finishsave {dj} {
 	set end_time [clock seconds]
-	set m [mysqlconnect -user root -db username -password password]
+	set m [mysqlconnect -user username -db database -password password]
 	# Checking out the Top-Row's DJ Name
 	set query "SELECT dj_name from session_log order by ID desc limit 1"
 	set result [mysqlsel $m $query -list]
@@ -1007,7 +1005,7 @@ proc finishsave {dj} {
 
 bind pub -|- !topdj toplog
 proc toplog {nick uhost hand chan arg} {
-	set m [mysqlconnect -user root -db username -password password]
+	set m [mysqlconnect -user username -db database -password password]
 	set name_query "SELECT dj_name from djlog order by total_time desc"
 	set name_result [mysqlsel $m $name_query -list]
 	set tt_query "SELECT total_time from djlog order by total_time desc"
@@ -1045,7 +1043,7 @@ proc toplog {nick uhost hand chan arg} {
 
 bind pub -|- !lst lastsessions
 proc lastsessions {nick uhost hand chan arg} {
-	set m [mysqlconnect -user root -db username -password password]
+	set m [mysqlconnect -user username -db database -password password]
 	set name_query "SELECT dj_name from session_log order by id desc"
 	set name_result [mysqlsel $m $name_query -list]
 	set on_query "SELECT onair_time from session_log order by id desc"
@@ -1080,6 +1078,30 @@ proc lastsessions {nick uhost hand chan arg} {
 		}
 	}
 }
+
+bind pub -|- !elog elog 
+proc elog {nick uhost hand chan arg} {
+	set errorlog [open "logs/eggdrop.log" r]
+	if {$chan != "#Torrent-Invites"} {
+		# Seperate lines into a list
+		set line [split [read -nonewline $errorlog] "\n"]
+		set line [lreverse $line]
+		if {[llength $arg]== 0} {
+			for {set x 0} {$x < 4} {incr x} {
+				set newline [lindex $line $x]
+				putnow "PRIVMSG $chan :$newline"
+			}
+		} else {
+			for {set x 0} {$x < $arg} {incr x} {
+				set newline [lindex $line $x]
+				puthelp "PRIVMSG $chan :$newline"
+			}
+		}
+	}
+}
+
+
+
 ####################################
 ##  Calculate Seconds to D:H:M:S  ##
 ####################################
@@ -1097,6 +1119,7 @@ proc duration { int_time } {
 	}
 	return [join $timeList]
 }
+
 
 bind pub -|- !duration duracommand
 proc duracommand {nick uhost hand chan arg} {
