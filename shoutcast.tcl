@@ -26,7 +26,7 @@ set dbname "db"
 # AutoDJ's Name
 set autodj "AutoDj"
 
-set song 0
+sset song 0
 
 # Binding ! commands to fucntions
 bind pub -|- !lst lastsessions
@@ -86,9 +86,9 @@ proc start {} {
 	#Starting Check Peak Timer
 		maxlisteners
 	#Starting Advertisment Timer
-		run_periodically #TI-Radio
+		#run_periodically #TI-Radio
 	#Starting Advertisement Timer
-		run_periodically #Torrent-Invites
+		#run_periodically #Torrent-Invites
 	#Starting Delete Request Timer
 		deletereq
 		set firstad 0
@@ -102,9 +102,9 @@ proc start {} {
 	#Starting Check Peak Timer
 		maxlisteners
 	#Starting Advertisment Timer
-		run_periodically #Torrent-Invites
+		#run_periodically #Torrent-Invites
 	#Starting Advertisement Timer
-		run_periodically #TI-Radio
+		#run_periodically #TI-Radio
 	#Starting Delete Request Timer
 		deletereq
 		set firstad 0
@@ -112,50 +112,50 @@ proc start {} {
 }
 
 ## Advertisments for who is !NP
-proc run_periodically {chan} {
-	if {[validchan #BotDev] && [botonchan #BotDev]} {
-		global siteurl djchan title dj logchan listenurl radiochan dj song genre firstad autodj
-		::http::config -useragent "Mozilla/5.0; Shoutinfo"
-		timer 60 [list run_periodically $chan]
-		set http_req [::http::geturl $siteurl -timeout 2000]
-		if {[::http::status $http_req] != "ok"} {
-			putnow "PRIVMSG $logchan :ABORT ABORT"
-		} else {
-			set data [::http::data $http_req]
-			::http::cleanup $http_req
-			if {[regexp {<font class=default>Stream Title: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
-				set dj $title
-			} else {
-				catch {unset dj}
-			}
-			if {[regexp {<font class=default>Stream Genre: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
-				set genre $title
-			} else {
-				catch {unset genre}
-			}
-			if {[regexp {<font class=default>Current Song: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
-				set song $title
-			} else {
-				catch {unset song}
-			}
-				if {$dj == $autodj || $song == 0 || $dj == 0 || $dj == 0} {
-					putnow "PRIVMSG $logchan :AutoDJ is On or Server is Offline."
-				} else {
-					if {[string match *c* [lindex [split [getchanmode $chan]] 0]]} {
-						set a "\002$dj is live on the TI-Radio\002 || \002Genre\002: $genre || "
-						set b  "\002Now Playing\002: $song || \002Listen @ $listenurl \002"
-						putnow "PRIVMSG $chan : $a$b"
-					} else {
-						set c "\002\00303$dj is live on the TI-Radio\002\00303\00307 ||  "
-						set d "\00307\003\002Genre\002: $genre \003\00307|| \00307\003\002Now Playing"
-						set e "\002: $song \003\00307||\00307 \003\00304\002 Listen @ $listenurl \002\00304"
-						putnow "PRIVMSG $chan : $c$d$e"
-					}
-				}
-			}
-		}
-		return 1;
-	}
+# proc run_periodically {chan} {
+# 	if {[validchan #BotDev] && [botonchan #BotDev]} {
+# 		global siteurl djchan title dj logchan listenurl radiochan dj song genre firstad autodj
+# 		::http::config -useragent "Mozilla/5.0; Shoutinfo"
+# 		timer 60 [list run_periodically $chan]
+# 		set http_req [::http::geturl $siteurl -timeout 2000]
+# 		if {[::http::status $http_req] != "ok"} {
+# 			putnow "PRIVMSG $logchan :ABORT ABORT"
+# 		} else {
+# 			set data [::http::data $http_req]
+# 			::http::cleanup $http_req
+# 			if {[regexp {<font class=default>Stream Title: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
+# 				set dj $title
+# 			} else {
+# 				catch {unset dj}
+# 			}
+# 			if {[regexp {<font class=default>Stream Genre: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
+# 				set genre $title
+# 			} else {
+# 				catch {unset genre}
+# 			}
+# 			if {[regexp {<font class=default>Current Song: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
+# 				set song $title
+# 			} else {
+# 				catch {unset song}
+# 			}
+# 				if {$dj == $autodj || $song == 0 || $dj == 0 || $dj == 0} {
+# 					putnow "PRIVMSG $logchan :AutoDJ is On or Server is Offline."
+# 				} else {
+# 					if {[string match *c* [lindex [split [getchanmode $chan]] 0]]} {
+# 						set a "\002$dj is live on the TI-Radio\002 || \002Genre\002: $genre || "
+# 						set b  "\002Now Playing\002: $song || \002Listen @ $listenurl \002"
+# 						putnow "PRIVMSG $chan : $a$b"
+# 					} else {
+# 						set c "\002\00303$dj is live on the TI-Radio\002\00303\00307 ||  "
+# 						set d "\00307\003\002Genre\002: $genre \003\00307|| \00307\003\002Now Playing"
+# 						set e "\002: $song \003\00307||\00307 \003\00304\002 Listen @ $listenurl \002\00304"
+# 						putnow "PRIVMSG $chan : $c$d$e"
+# 					}
+# 				}
+# 			}
+# 		}
+# 		return 1;
+# 	}
 
 ## Checks if DJ has changed - 10s 
 proc checkdj {} {
@@ -783,7 +783,8 @@ proc toplog {nick uhost hand chan arg} {
 		}
 	} else {
 		putnow "PRIVMSG $chan : Top $arg DJ Log"
-		while {$i <= $arg} {
+		set arg [expr {$arg*1}]
+		while {$i < $arg} {
 			set name [lindex $name_result $i]
 			set total_time [lindex $tt_result $i]
 			set total_sessions [lindex $ts_result $i]
@@ -823,7 +824,8 @@ proc lastsessions {nick uhost hand chan arg} {
 		}
 	} else {
 		putnow "PRIVMSG $chan : Last $arg DJ Sessions"
-		while {$i <= $arg} {
+		set arg [expr {$arg*1}]
+		while {$i < $arg} {
 			set name [lindex $name_result $i]
 			set onairs [lindex $on_result $i]
 			set offairs [lindex $off_result $i]
