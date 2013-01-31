@@ -1,8 +1,6 @@
-##
-## 																		
-## 						Shoutcast Radio Bot 						
-##                                                                      
-##
+###############################																		
+###Shoutcast Radio Bot by Sky##					
+###############################                                                                   
 
 
 # We need to grab stuff from the internet
@@ -20,7 +18,6 @@ set logchan "#log"
 set radiochan "#radio"
 
 # Set Variables to Database Info
-
 set dbhost "localhost"
 set dbuser "user"
 set dbpass "password"
@@ -32,7 +29,6 @@ set autodj "AutoDj"
 set song 0
 
 # Binding ! commands to fucntions
-
 bind pub -|- !lst lastsessions
 bind pub -|- !start starttimers 
 bind pub -|- !lp songlist
@@ -51,7 +47,6 @@ bind pub -|- !url site
 bind pub -|- !commands commands
 
 # Functions: Start and Stop Timer
-
 proc hasTimers {} {
 	set timerList [timers];
 	return [llength $timerList];
@@ -65,7 +60,6 @@ proc stop {} {
 }
 
 ## Functions for if DJ is Online
-
 proc djonline {} {
 	global dj
 	return [info exists dj]
@@ -83,7 +77,6 @@ proc isautodj {string} {
 }
 
 ## Refreshing bot resets timers
-
 proc start {} {
 	global logchan
 	if {[hasTimers] == 0} {
@@ -119,7 +112,6 @@ proc start {} {
 }
 
 ## Advertisments for who is !NP
-
 proc run_periodically {chan} {
 	if {[validchan #BotDev] && [botonchan #BotDev]} {
 		global siteurl djchan title dj logchan listenurl radiochan dj song genre firstad autodj
@@ -166,7 +158,6 @@ proc run_periodically {chan} {
 	}
 
 ## Checks if DJ has changed - 10s 
-
 proc checkdj {} {
 	global dj logchan siteurl newdj djchan
 	if {![validchan #BotDev] || ![botonchan #BotDev]} { return }
@@ -234,7 +225,6 @@ proc checkdj {} {
 }
 
 ## Checks if peaked in listeners 
-
 proc maxlisteners {} {
 	global logchan siteurl peakfile djchan
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
@@ -276,7 +266,6 @@ proc maxlisteners {} {
 }
 
 ## Command to Start Timers 
-
 proc starttimers {nick uhost hand chan arg} {
 	global djchan
 	if {$chan == $djchan} {
@@ -290,7 +279,6 @@ proc starttimers {nick uhost hand chan arg} {
 
 
 ## Command to get Last Played List
-
 proc songlist {nick uhost hand chan arg} {
 	global dj logchan siteurl newdj lastplayed 
 	if {![validchan #BotDev] || ![botonchan #BotDev]} { return }
@@ -317,7 +305,6 @@ proc songlist {nick uhost hand chan arg} {
 }
 
 ## Advert the Request List 
-
 proc requestlist {nick uhost hand chan arg} {
 	global djchan
 	putnow "NOTICE $nick :\002\The OLDEST request will be deleted every 10 minutes.\002"
@@ -349,7 +336,6 @@ proc requestlist {nick uhost hand chan arg} {
 }
 
 ## Clear the Request List 
-
 proc clearlist {nick uhost hand chan arg} {
 	global djchan
 	if {$chan == $djchan} {
@@ -365,7 +351,6 @@ proc clearlist {nick uhost hand chan arg} {
 }
 
 ## Delete Request Func + Timer
-
 proc requestproc {reqitem} {
 	set filename "requestlist.txt"
 	set testin [open $filename r]
@@ -395,7 +380,6 @@ proc requestproc {reqitem} {
 }
 
 ## Command to Show Now Playing 
-
 proc nowplaying {nick uhost hand chan arg} {
 	global siteurl radiochan mainchan
 	set radiochan [string tolower $radiochan]
@@ -419,7 +403,6 @@ proc nowplaying {nick uhost hand chan arg} {
 }
 
 ## Command to show who is DJ
-
 proc deejay {nick uhost hand chan arg} {
 	global siteurl radiochan dj mainchan
 	set radiochan [string tolower $radiochan]
@@ -448,7 +431,6 @@ proc deejay {nick uhost hand chan arg} {
 }
 
 ## Command to get URL Info
-
 proc site {nick uhost hand chan arg} {
 	global siteurl mainchan
 	if {$chan != $mainchan} {
@@ -459,7 +441,6 @@ proc site {nick uhost hand chan arg} {
 }
 
 ## Command to get Server Info
-
 proc serverinfo {nick uhost hand chan arg} {
 	global siteurl radiochan mainchan
 	set radiochan [string tolower $radiochan]
@@ -486,7 +467,6 @@ proc serverinfo {nick uhost hand chan arg} {
 }
 
 ## Command to get current Genre
-
 proc genre {nick uhost hand chan arg} {
 	global siteurl radiochan mainchan
 	set radiochan [string tolower $radiochan]
@@ -513,7 +493,6 @@ proc genre {nick uhost hand chan arg} {
 }
 
 ## Command to get Peak Info
-
 proc peak {nick uhost hand chan arg} {
 	global siteurl radiochan mainchan
 	set radiochan [string tolower $radiochan]
@@ -542,14 +521,12 @@ proc peak {nick uhost hand chan arg} {
 }
 
 ## Command to get Listen
-
 proc pls {nick uhost hand chan arg} {
 	global listenurl
 	putnow "PRIVMSG $chan :\002Stream/Listen\002: $listenurl"
 }
 
 ## Command to get Command FAQ
-
 proc commands {nick uhost hand chan arg} {
 	global radiochan djchan mainchan
 	set radiochan [string tolower $radiochan]
@@ -574,7 +551,6 @@ proc commands {nick uhost hand chan arg} {
 }
 
 ## Command to submit a request
-
 proc request {nick uhost hand chan arg} {
 	global radiochan djchan reqitem 
 	set radiochan [string tolower $radiochan]
@@ -622,7 +598,6 @@ proc request {nick uhost hand chan arg} {
 }
 
 ##     !log DJ Log Information
-
 proc getlog {nick uhost hand chan arg} {
 	global dbhost dbuser dbname dbpass
 	set m [mysqlconnect -host $dbhost -user $dbuser -db $dbname -password $dbpass]
@@ -649,7 +624,6 @@ proc getlog {nick uhost hand chan arg} {
 }
 
 ##  First Save: Name + Onair Time
-
 proc startsave {dj} {
 	global dbhost dbuser dbname dbpass
 	set start_time [clock seconds]
@@ -726,7 +700,6 @@ proc startsave {dj} {
 }
 
 ## Second: Offair, Session, Total
-
 proc finishsave {dj} {
 	global djchan dbhost dbuser dbname dbpass
 	set end_time [clock seconds]
@@ -785,7 +758,6 @@ proc finishsave {dj} {
 }
 
 ##     Top 5 or $arg of DJ Log
-
 proc toplog {nick uhost hand chan arg} {
 	global dbhost dbuser dbname dbpass
 	set m [mysqlconnect -host $dbhost -user $dbuser -db $dbname -password $dbpass]
@@ -864,7 +836,6 @@ proc lastsessions {nick uhost hand chan arg} {
 }
 
 ## Delete Request Func + Timer
-
 proc deletereq {} {
 	global djchan logchan
 	timer 10 [list deletereq]
@@ -887,7 +858,6 @@ proc deletereq {} {
 }
 
 ##  Calculate Seconds to D:H:M:S
-
 proc duration { int_time } {
 	set timeList [list]
 	foreach div {604800 86400 3600 60 1} mod {0 7 24 60 60} name {wk day hr min sec} {
@@ -903,7 +873,6 @@ proc duration { int_time } {
 }
 
 ## Advert if Offline->RealDJ
-
 proc onair {} {
 	global radiochan djchan dj newdj mainchan
 	set a "\002$newdj\002 - Is Now Broadcasting Live! Tune "
@@ -919,7 +888,6 @@ proc onair {} {
 }
 
 ## Advert if RealDJ->RealDJ
-
 proc tempoffair {} {
 	global radiochan djchan dj
 	set radiochan [string tolower $radiochan]
@@ -930,7 +898,6 @@ proc tempoffair {} {
 }
 
 ## Advert if Offline->AutoDJ
-
 proc autodjon {} {
 	global radiochan
 	set radiochan [string tolower $radiochan]
@@ -940,7 +907,6 @@ proc autodjon {} {
 }
 
 ## Advert if Someone->Offline
-
 proc serveroffline {} {
 	global radiochan
 	set radiochan [string tolower $radiochan]
@@ -950,7 +916,6 @@ proc serveroffline {} {
 }
 
 ## Advert if RealDJ->AutoDJ
-
 proc autooffair {} {
 	global radiochan djchan dj
 	set radiochan [string tolower $radiochan]
@@ -963,7 +928,6 @@ proc autooffair {} {
 }
 
 ## Advert if Server if Offline
-
 proc offair {} {
 	global radiochan djchan dj
 	set radiochan [string tolower $radiochan]
