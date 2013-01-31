@@ -1,36 +1,56 @@
-##########################################################################
-## 																		##
-## 						Torrent-Invites Radio Bot 						##
-##                                                                      ##
-##########################################################################
+##
+## 																		
+## 						Shoutcast Radio Bot 						
+##                                                                      
+##
 
 
-####################################
-## Setting up different constants ##
-####################################
-
-set siteurl "http://216.104.37.26:9005"
-set playlist "http://216.104.37.26:9005/listen.pls"
-set urlhistory "http://216.104.37.26:9005/played.html"
-set server "216.104.37.26"
-set port "9005"
-set agent "Mozilla"
-set djch "#DJ"
-set main "#Torrent-Invites"
-set test "#BotDev"
-set streamch "#TI-Radio"
-set irpg "#IdleRPG"
-set isair 0
-set userair 0
-set firstad 0
-set song 0
-
+# We need to grab stuff from the internet
 package require http
 
+# Set Variables to Shoutcast Webpages
+set siteurl "http://216.104.37.26:9005"
+set listenurl "http://216.104.37.26:9005/listen.pls"
+set lastplayed "http://216.104.37.26:9005/played.html"
 
-####################################
-## Functions: Start and Stop Timer##
-####################################
+# Channels Names (Log Channel, DJ Channel, Radio Channel, Main Channel)
+set djchan "#dj"
+set mainchan "#main"
+set logchan "#log"
+set radiochan "#radio"
+
+# Set Variables to Database Info
+
+set dbhost "localhost"
+set dbuser "user"
+set dbpass "password"
+set dbname "db"
+
+# AutoDJ's Name
+set autodj "AutoDj"
+
+set song 0
+
+# Binding ! commands to fucntions
+
+bind pub -|- !lst lastsessions
+bind pub -|- !start starttimers 
+bind pub -|- !lp songlist
+bind pub -|- !server serverinfo
+bind pub -|- !clearlist clearlist
+bind pub -|- !reqlist requestlist
+bind pub -|- !np nowplaying
+bind pub -|- !request request
+bind pub -|- !peak peak
+bind pub -|- !dj deejay
+bind pub -|- !genre genre
+bind pub -|- !listen pls
+bind pub -|- !log getlog
+bind pub -|- !topdj toplog
+bind pub -|- !url site
+bind pub -|- !commands commands
+
+# Functions: Start and Stop Timer
 
 proc hasTimers {} {
 	set timerList [timers];
@@ -42,59 +62,72 @@ proc stop {} {
 	foreach timer $timerList {
 		killtimer [lindex $timer 2];
 	}
+}
 
+## Functions for if DJ is Online
 
-####################################
-## Refreshing bot resets timers ##
-####################################
+proc djonline {} {
+	global dj
+	return [info exists dj]
+}
 
+proc djauto {} {
+	global dj
+	if {![djonline]} { return 0 }
+	return [isautodj $dj]
+}
+
+proc isautodj {string} {
+	global autodj
+	expr {$string == $autodj}
+}
+
+## Refreshing bot resets timers
 
 proc start {} {
-	global test
+	global logchan
 	if {[hasTimers] == 0} {
-		putnow "PRIVMSG $test :No Timers Active. Activating Timer Now."
-		#Starting Check DJ Timer
+		putnow "PRIVMSG $logchan :No Timers Active. Activating Timer Now."
+	#Starting Check DJ Timer
 		checkdj
-		#Starting Check Peak Timer
+	#Starting Check Peak Timer
 		maxlisteners
-		#Starting Advertisment Timer
+	#Starting Advertisment Timer
 		run_periodically #TI-Radio
-		#Starting Advertisement Timer
+	#Starting Advertisement Timer
 		run_periodically #Torrent-Invites
-		#Starting Delete Request Timer
+	#Starting Delete Request Timer
 		deletereq
 		set firstad 0
 	} else {
-		putnow "PRIVMSG $test :Timer Active Already. Killing Active Timer Now."
-		# Stop All Timers 2
+		putnow "PRIVMSG $logchan :Timer Active Already. Killing Active Timer Now."
+	# Stop All Timers 2
 		stop
-		putnow "PRIVMSG $test :Activating Timer Now"
-		#Starting Check DJ Timer
+		putnow "PRIVMSG $logchan :Activating Timer Now"
+	#Starting Check DJ Timer
 		checkdj
-		#Starting Check Peak Timer
+	#Starting Check Peak Timer
 		maxlisteners
-		#Starting Advertisment Timer
+	#Starting Advertisment Timer
 		run_periodically #Torrent-Invites
-		#Starting Advertisement Timer
+	#Starting Advertisement Timer
 		run_periodically #TI-Radio
-		#Starting Delete Request Timer
+	#Starting Delete Request Timer
 		deletereq
 		set firstad 0
 	}
 }
 
-####################################
-## Advertisments for who is !NP ##
-####################################
+## Advertisments for who is !NP
 
 proc run_periodically {chan} {
 	if {[validchan #BotDev] && [botonchan #BotDev]} {
-		global siteurl djch title dj test playlist streamch dj song genre firstad
+		global siteurl djchan title dj logchan listenurl radiochan dj song genre firstad autodj
 		::http::config -useragent "Mozilla/5.0; Shoutinfo"
 		timer 60 [list run_periodically $chan]
 		set http_req [::http::geturl $siteurl -timeout 2000]
 		if {[::http::status $http_req] != "ok"} {
-			putnow "PRIVMSG $test :ABORT ABORT"
+			putnow "PRIVMSG $logchan :ABORT ABORT"
 		} else {
 			set data [::http::data $http_req]
 			::http::cleanup $http_req
@@ -113,97 +146,36 @@ proc run_periodically {chan} {
 			} else {
 				catch {unset song}
 			}
-			if {$firstad != 0} {
-				if {$dj == "TI-Radio AutoDj" || $song == 0 || $dj == 0 || $dj == 0} {
-					putnow "PRIVMSG $test :AutoDJ is On or Server is Offline."
+				if {$dj == $autodj || $song == 0 || $dj == 0 || $dj == 0} {
+					putnow "PRIVMSG $logchan :AutoDJ is On or Server is Offline."
 				} else {
 					if {[string match *c* [lindex [split [getchanmode $chan]] 0]]} {
 						set a "\002$dj is live on the TI-Radio\002 || \002Genre\002: $genre || "
-						set b  "\002Now Playing\002: $song || \002Listen @ $playlist \002"
+						set b  "\002Now Playing\002: $song || \002Listen @ $listenurl \002"
 						putnow "PRIVMSG $chan : $a$b"
-						incr firstad
 					} else {
 						set c "\002\00303$dj is live on the TI-Radio\002\00303\00307 ||  "
 						set d "\00307\003\002Genre\002: $genre \003\00307|| \00307\003\002Now Playing"
-						set e "\002: $song \003\00307||\00307 \003\00304\002 Listen @ $playlist \002\00304"
+						set e "\002: $song \003\00307||\00307 \003\00304\002 Listen @ $listenurl \002\00304"
 						putnow "PRIVMSG $chan : $c$d$e"
-						incr firstad
 					}
 				}
-			} 	
 			}
 		}
 		return 1;
 	}
 
-proc idlerpg {chan} {
-	timer 10 [list idlerpg #TI-Radio]
-	putnow "PRIVMSG #Idlerpg :\002Registrations have started! Please register and play :)\002"
-	putnow "PRIVMSG #Idlerpg :Please do not be discouraged by starting times. The system is chaotic enough that you could start a few days late and still win. "
-}
-
-####################################
-## Functions for if DJ is Online ##
-####################################
-
-proc djonline {} {
-	global dj
-	return [info exists dj]
-}
-
-proc djauto {} {
-	global dj
-	if {![djonline]} { return 0 }
-	return [isautodj $dj]
-}
-
-proc isautodj {string} {
-	expr {$string == "TI-Radio AutoDj"}
-}
-
-####################################
-## Command to get Last Played List##
-####################################
-
-bind pub -|- !lp songlist
-proc songlist {nick uhost hand chan arg} {
-	global dj test siteurl newdj urlhistory djch length title
-	if {![validchan #BotDev] || ![botonchan #BotDev]} { return }
-	::http::config -useragent "Mozilla/5.0; Shoutinfo"
-	set http_req [::http::geturl $urlhistory -timeout 2000]
-	if {[::http::status $http_req] != "ok"} {
-		# we assume the server is offline
-		putnow "PRIVMSG $test : Unable to connect"
-		return
-	}
-	set data [::http::data $http_req]
-	::http::cleanup $http_req
-	set testvalue 0
-	foreach {x length title} [regexp -all -inline {<td>(\d\d:\d\d:\d\d)</td><td>([^<]+-[^<]+)<} $data] {
-		if {$testvalue != 0} {
-			putnow "notice $nick :#$testvalue: $length | $title"
-			incr testvalue
-		} else {
-			putnow "notice $nick :\002Current Song\002: $length | $title "
-			incr testvalue
-		}
-
-	}
-}
-
-####################################
-## Checks if DJ has changed - 10s ##
-####################################
+## Checks if DJ has changed - 10s 
 
 proc checkdj {} {
-	global dj test siteurl newdj djch
+	global dj logchan siteurl newdj djchan
 	if {![validchan #BotDev] || ![botonchan #BotDev]} { return }
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
 	set http_req [::http::geturl $siteurl -timeout 2000]
 	after 10000 [list checkdj]
 	if {[::http::status $http_req] != "ok"} {
 		# we assume the server is offline
-		putnow "PRIVMSG $test :Assumption: Server is Offline or Lagging"
+		putnow "PRIVMSG $logchan :Assumption: Server is Offline or Lagging"
 		return
 	}
 	set data [::http::data $http_req]
@@ -261,17 +233,15 @@ proc checkdj {} {
 	return
 }
 
-####################################
-## Checks if peaked in listeners ##
-####################################
+## Checks if peaked in listeners 
 
 proc maxlisteners {} {
-	global test siteurl peakfile djch
+	global logchan siteurl peakfile djchan
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
 	set http_req [::http::geturl $siteurl -timeout 2000]
 	after 100000 [list maxlisteners]
 	if {[::http::status $http_req] != "ok"} {
-		putnow "PRIVMSG $test :Assumption: Server is Offline or Lagging"
+		putnow "PRIVMSG $logchan :Assumption: Server is Offline or Lagging"
 	} else {
 		set data [::http::data $http_req]
 		::http::cleanup $http_req
@@ -294,7 +264,7 @@ proc maxlisteners {} {
 					set line $testdata
 					puts $out $line
 				}
-				putnow "PRIVMSG $djch :Max Viewers has increased :D! Good job."
+				putnow "PRIVMSG $djchan :Max Viewers has increased :D! Good job."
 				# Close Both Files
 				close $in
 				close $out
@@ -305,142 +275,72 @@ proc maxlisteners {} {
 	}
 }
 
-####################################
-## Advert if Offline->RealDJ ##
-####################################
+## Command to Start Timers 
 
-proc onair {} {
-	global streamch djch isair siteurl userair djcheck dj newdj main
-	set a "\002$newdj\002 - Is Now Broadcasting Live! Tune "
-	set b "in @ http://216.104.37.26:9005/listen.pls"
-	set c "$newdj is now ON AIR @ "
-	set d "#TI-Radio (http://216.104.37.26:9005/listen.pls)"
-	set e "Torrent-Invites Radio || Status: DJ On Air || $newdj Is Now Broadcasting || "
-	set f "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
-	putnow "PRIVMSG $streamch : $a$b"
-	putnow "PRIVMSG $djch :\002ON AIR\002: $newdj is now ON AIR."
-	putnow "PRIVMSG $main : $c$d"
-	putnow "TOPIC $streamch : $e$f"
-}
-
-####################################
-## Advert if RealDJ->RealDJ ##
-####################################
-
-proc tempoffair {} {
-	global streamch djch userair djcheck dj main
-	set streamch [string tolower $streamch]
-	if {$dj != 0} {
-		putnow "PRIVMSG $streamch :\002OFF AIR\002: $dj is now OFF AIR."
-		putnow "PRIVMSG $djch :\002OFF AIR\002: $dj is now OFF AIR."
-	}
-}
-
-####################################
-## Advert if Offline->AutoDJ ##
-####################################
-
-proc autodjon {} {
-	global streamch djch userair djcheck dj main
-	set streamch [string tolower $streamch]
-	set a "Torrent-Invites Radio || Status: AutoDJ ||"
-	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
-	putnow "TOPIC $streamch : $a$b"
-}
-
-####################################
-## Advert if Someone->Offline ##
-####################################
-
-proc serveroffline {} {
-	global streamch djch userair djcheck dj main
-	set streamch [string tolower $streamch]
-	set a "Torrent-Invites Radio || Status: Stream Offline ||"
-	set b " URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
-	putnow "TOPIC $streamch : $a$b"
-}
-
-####################################
-## Advert if RealDJ->AutoDJ ##
-####################################
-
-proc autooffair {} {
-	global streamch djch userair djcheck dj main
-	set streamch [string tolower $streamch]
-	set a "Torrent-Invites Radio || Status: AutoDJ || "
-	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
-	putnow "PRIVMSG $streamch :\002OFF AIR\002: $dj is now OFF AIR."
-	putnow "PRIVMSG $djch :\002OFF AIR\002: $dj is now OFF AIR."
-	putnow "TOPIC $streamch : $a$b"
-
-}
-
-####################################
-## Advert if Server if Offline ##
-####################################
-
-proc offair {} {
-	global streamch djch userair djcheck dj main
-	set streamch [string tolower $streamch]
-	set a "Torrent-Invites Radio || Status: Stream Offline || "
-	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
-	putnow "PRIVMSG $streamch :\002OFF AIR\002: $dj is now OFF AIR."
-	putnow "PRIVMSG $djch :\002OFF AIR\002: $dj is now OFF AIR."
-	putnow "PRIVMSG $djch :\00304$dj, please remember to \002TURN ON AUTODJ\002 \00304"
-	putnow "TOPIC $streamch : $a$b"
-}
-
-####################################
-## Save Song Info (Personal) ##
-####################################
-
-bind pub n|n !save saving
-proc saving {nick uhost hand chan arg} {
-	global siteurl test
-	::http::config -useragent "Mozilla/5.0; Shoutinfo"
-	set http_req [::http::geturl $siteurl -timeout 2000]
-	if {[::http::status $http_req] != "ok"} {
-		putnow "PRIVMSG $test :ABORT ABORT"
-	} else {
-		set data [::http::data $http_req]
-		::http::cleanup $http_req
-		if {[regexp {<font class=default>Current Song: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
-			set savefile [open "savedsongs.txt" w]
-			puts $savefile $title
-			putnow "PRIVMSG $chan :Song has been saved"
-			close $savefile
+proc starttimers {nick uhost hand chan arg} {
+	global djchan
+	if {$chan == $djchan} {
+		if {[isop $nick $djchan] == 1 || [ishalfop $nick $djchan] == 1} {
+			putserv "PRIVMSG $chan :$nick started the timers."
+			putlog "$nick started the timers."
+			start
 		}
 	}
 }
 
-####################################
-## Advert the Request List ##
-####################################
 
-bind pub -|- !reqlist requestlist
+## Command to get Last Played List
+
+proc songlist {nick uhost hand chan arg} {
+	global dj logchan siteurl newdj lastplayed 
+	if {![validchan #BotDev] || ![botonchan #BotDev]} { return }
+	::http::config -useragent "Mozilla/5.0; Shoutinfo"
+	set http_req [::http::geturl $lastplayed -timeout 2000]
+	if {[::http::status $http_req] != "ok"} {
+		# we assume the server is offline
+		putnow "PRIVMSG $logchan : Unable to connect"
+		return
+	}
+	set data [::http::data $http_req]
+	::http::cleanup $http_req
+	set testvalue 0
+	foreach {x length title} [regexp -all -inline {<td>(\d\d:\d\d:\d\d)</td><td>([^<]+-[^<]+)<} $data] {
+		if {$testvalue != 0} {
+			putnow "notice $nick :#$testvalue: $length | $title"
+			incr testvalue
+		} else {
+			putnow "notice $nick :\002Current Song\002: $length | $title "
+			incr testvalue
+		}
+
+	}
+}
+
+## Advert the Request List 
+
 proc requestlist {nick uhost hand chan arg} {
-	global djch
+	global djchan
 	putnow "NOTICE $nick :\002\The OLDEST request will be deleted every 10 minutes.\002"
-	if {$chan == $djch} {
+	if {$chan == $djchan} {
 		set reqnumber 0
 		set filename "requestlist.txt"
 		set in [open $filename r]
 		while {1} {
 			set line [gets $in]
 			if {$line == ""} {
-				putnow "PRIVMSG $djch :There are no requests at the moment."
+				putnow "PRIVMSG $djchan :There are no requests at the moment."
 				break
 			} else {
 				if {[eof $in]} {
-					putnow "PRIVMSG $djch :Oldest: $line"
+					putnow "PRIVMSG $djchan :Oldest: $line"
 					close $in
 					break
 				}
 				if {$reqnumber == 0} {
-					putnow "PRIVMSG $djch :Newest: $line"
+					putnow "PRIVMSG $djchan :Newest: $line"
 					incr reqnumber
 				} else {
-					putnow "PRIVMSG $djch :$reqnumber: $line"
+					putnow "PRIVMSG $djchan :$reqnumber: $line"
 					incr reqnumber
 				}
 			}
@@ -448,53 +348,23 @@ proc requestlist {nick uhost hand chan arg} {
 	}
 }
 
-####################################
-## Clear the Request List ##
-####################################
+## Clear the Request List 
 
-bind pub -|- !clearlist clearlist
 proc clearlist {nick uhost hand chan arg} {
-	global djch
-	if {$chan == $djch} {
+	global djchan
+	if {$chan == $djchan} {
 		if {[isop $nick $chan] == 1 || [ishalfop $nick $chan] == 1} {
 			set filename "requestlist.txt"
 			set out [open $filename w]
 			set line ""
 			puts $out $line
-			putnow "PRIVMSG $djch :$nick has cleared the request list."
+			putnow "PRIVMSG $djchan :$nick has cleared the request list."
 			close $out
 		}
 	}
 }
 
-####################################
-## Delete Request Func + Timer ##
-####################################
-
-proc deletereq {} {
-	global djch test
-	timer 10 [list deletereq]
-	set filename "requestlist.txt"
-	set fp [open $filename r+]
-	set data [read -nonewline $fp]
-	set lines [split $data "\n"]
-	close $fp
-	set line_to_delete [expr {[llength $lines] - 1}]
-	set lines [lreplace $lines $line_to_delete $line_to_delete]
-	set fp [open $filename w+]
-	if {[gets $fp data] >= 1} {
-		puts -nonewline $fp $lines
-		close $fp
-	} else {
-		puts -nonewline $fp [join $lines "\n"]
-		close $fp
-	}
-	putnow "PRIVMSG $test :Deleting a Request"
-}
-
-####################################
-## Delete Request Func + Timer ##
-####################################
+## Delete Request Func + Timer
 
 proc requestproc {reqitem} {
 	set filename "requestlist.txt"
@@ -524,46 +394,11 @@ proc requestproc {reqitem} {
 	}
 }
 
-####################################
-## Command to Start Timers ##
-####################################
+## Command to Show Now Playing 
 
-bind pub -|- !start starttimers
-proc starttimers {nick uhost hand chan arg} {
-	global djch
-	if {$chan == $djch} {
-		if {[isop $nick $djch] == 1 || [ishalfop $nick $djch] == 1} {
-			putserv "PRIVMSG $chan :$nick started the timers."
-			putlog "$nick started the timers."
-			start
-		}
-	}
-}
-
-####################################
-## Command to Rehash the Bot ##
-####################################
-
-bind pub -|- !rehash prehash
-proc prehash {nick uhost hand chan arg} {
-	global djch test
-	if {$chan == $djch || $chan == $test} {
-		if {[isop $nick $djch] == 1 || [ishalfop $nick $djch] == 1} {
-			putserv "PRIVMSG $chan :$nick rehashed me."
-			putlog "$nick rehashed the bot"
-			rehash
-		}
-	}
-}
-
-####################################
-## Command to Show Now Playing ##
-####################################
-
-bind pub -|- !np nowplaying
 proc nowplaying {nick uhost hand chan arg} {
-	global siteurl streamch dj djch main
-	set streamch [string tolower $streamch]
+	global siteurl radiochan mainchan
+	set radiochan [string tolower $radiochan]
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
 	set http_req [::http::geturl $siteurl -timeout 2000]
 	if {[::http::status $http_req] != "ok"} {
@@ -574,7 +409,7 @@ proc nowplaying {nick uhost hand chan arg} {
 	if {[regexp {<font class=default>Current Song: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
 		putnow "PRIVMSG $chan :\002Current Song\002: $title"
 	} else {
-		if {$chan != $main} {
+		if {$chan != $mainchan} {
 			putnow "PRIVMSG $chan :Couldn't receive any information, checking server status..."
 		} else {
 			putnow "NOTICE $nick :Couldn't receive any information, checking server status..."
@@ -583,14 +418,11 @@ proc nowplaying {nick uhost hand chan arg} {
 
 }
 
-####################################
-## Command to show who is DJ ##
-####################################
+## Command to show who is DJ
 
-bind pub -|- !dj deejay
 proc deejay {nick uhost hand chan arg} {
-	global siteurl streamch dj title djch main
-	set streamch [string tolower $streamch]
+	global siteurl radiochan dj mainchan
+	set radiochan [string tolower $radiochan]
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
 	set http_req [::http::geturl $siteurl -timeout 2000]
 	if {[::http::status $http_req] != "ok"} {
@@ -599,7 +431,7 @@ proc deejay {nick uhost hand chan arg} {
 	set data [::http::data $http_req]
 	::http::cleanup $http_req
 	if {[regexp {<font class=default>Stream Title: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
-		if {$chan != $main} {
+		if {$chan != $mainchan} {
 			putnow "PRIVMSG $chan :\002DJ\002: $title"
 			set dj $title
 		} else {
@@ -607,7 +439,7 @@ proc deejay {nick uhost hand chan arg} {
 			set dj $title
 		}
 	} else {
-		if {$chan != $main} {
+		if {$chan != $mainchan} {
 			putnow "PRIVMSG $chan :Couldn't receive any information, checking server status..."
 		} else {
 			putnow "NOTICE $nick :Couldn't receive any information, checking server status..."
@@ -615,48 +447,22 @@ proc deejay {nick uhost hand chan arg} {
 	}
 }
 
-####################################
-## Command to get Login Info ##
-####################################
+## Command to get URL Info
 
-bind pub -|- !login login
-proc login {nick uhost hand chan arg} {
-	global test djch main
-	if {$chan == $djch} {
-		if {[isop $nick $djch] == 1 || [ishalfop $nick $djch] == 1} {
-			putnow "NOTICE $nick : URL: asd"
-			putnow "NOTICE $nick : Username: asd"
-			putnow "NOTICE $nick : Password: asd"
-		} else {
-			putnow "NOTICE $nick :Sorry $nick, but you're not a halfop or greater in #DJ."
-		}
-	} else {
-		putnow "NOTICE $nick :Sorry $nick, this is a DJ Channel only command."
-	}
-}
-
-####################################
-## Command to get URL Info ##
-####################################
-
-bind pub -|- !url site
 proc site {nick uhost hand chan arg} {
-	global siteurl streamch djch main url
-	if {$chan != $main} {
+	global siteurl mainchan
+	if {$chan != $mainchan} {
 		putnow "PRIVMSG $chan :\002Website\002: $siteurl"
 	} else {
 		putnow "NOTICE $nick :\002Website\002: $siteurl"
 	}
 }
 
-####################################
-## Command to get Server Info ##
-####################################
+## Command to get Server Info
 
-bind pub -|- !server serverinfo
 proc serverinfo {nick uhost hand chan arg} {
-	global siteurl streamch djch main
-	set streamch [string tolower $streamch]
+	global siteurl radiochan mainchan
+	set radiochan [string tolower $radiochan]
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
 	set http_req [::http::geturl $siteurl -timeout 2000]
 	if {[::http::status $http_req] != "ok"} {
@@ -665,13 +471,13 @@ proc serverinfo {nick uhost hand chan arg} {
 	set data [::http::data $http_req]
 	::http::cleanup $http_req
 	if {[regexp {<font class=default>Server Status: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
-		if {$chan != $main} {
+		if {$chan != $mainchan} {
 			putnow "PRIVMSG $chan :\  002Server  \002: $title"
 		} else {
 			putnow "PRIVMSG $nick :\  002Server  \002: $title"
 		}
 	} else {
-		if {$chan != $main} {
+		if {$chan != $mainchan} {
 			putnow "PRIVMSG $chan :Couldn't contact the server, please check the configuration and/or streaming server"
 		} else {
 			putnow "NOTICE $nick :Couldn't contact the server, please check the configuration and/or streaming server"
@@ -679,14 +485,11 @@ proc serverinfo {nick uhost hand chan arg} {
 	}
 }
 
-####################################
-## Command to get current Genre ##
-####################################
+## Command to get current Genre
 
-bind pub -|- !genre genre
 proc genre {nick uhost hand chan arg} {
-	global siteurl streamch djch main
-	set streamch [string tolower $streamch]
+	global siteurl radiochan mainchan
+	set radiochan [string tolower $radiochan]
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
 	set http_req [::http::geturl $siteurl -timeout 2000]
 	if {[::http::status $http_req] != "ok"} {
@@ -695,13 +498,13 @@ proc genre {nick uhost hand chan arg} {
 	set data [::http::data $http_req]
 	::http::cleanup $http_req
 	if {[regexp {<font class=default>Stream Genre: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
-		if {$chan != $main} {
+		if {$chan != $mainchan} {
 			putnow "PRIVMSG $chan :\002Genre\002: $title"
 		} else {
 			putnow "NOTICE $nick :\002Genre\002: $title"
 		}
 	} else {
-		if {$chan != $main} {
+		if {$chan != $mainchan} {
 			putnow "PRIVMSG $chan :Couldn't receive any information, checking server status..."
 		} else {
 			putnow "NOTICE $nick :Couldn't receive any information, checking server status..."
@@ -709,14 +512,11 @@ proc genre {nick uhost hand chan arg} {
 	}
 }
 
-####################################
-## Command to get Peak Info ##
-####################################
+## Command to get Peak Info
 
-bind pub -|- !peak peak
 proc peak {nick uhost hand chan arg} {
-	global siteurl streamch djch main
-	set streamch [string tolower $streamch]
+	global siteurl radiochan mainchan
+	set radiochan [string tolower $radiochan]
 	::http::config -useragent "Mozilla/5.0; Shoutinfo"
 	set http_req [::http::geturl $siteurl -timeout 20000]
 	if {[::http::status $http_req] != "ok"} {
@@ -725,7 +525,7 @@ proc peak {nick uhost hand chan arg} {
 	set data [::http::data $http_req]
 	::http::cleanup $http_req
 	if {[regexp {<font class=default>Listener Peak: </font></td><td><font class=default><b>([^<]+)</b>} $data x title]} {
-		if {$chan != $main} {
+		if {$chan != $mainchan} {
 			set peakfile [open "peak.txt" r]
 			gets $peakfile line
 			set peakhigh $line
@@ -733,7 +533,7 @@ proc peak {nick uhost hand chan arg} {
 			putnow "PRIVMSG $chan :\002Session Peak\002: $title \002Overall Peak\002: $peakhigh "
 		}
 	} else {
-		if {$chan != $main} {
+		if {$chan != $mainchan} {
 			putnow "PRIVMSG $chan :Couldn't receive any information, checking server status..."
 		} else {
 			putnow "NOTICE $nick :Couldn't receive any information, checking server status..."
@@ -741,27 +541,20 @@ proc peak {nick uhost hand chan arg} {
 	}
 }
 
-####################################
-## Command to get Listen ##
-####################################
+## Command to get Listen
 
-bind pub -|- !listen pls
 proc pls {nick uhost hand chan arg} {
-	global playlist
-	putnow "PRIVMSG $chan :\002Stream/Listen\002: $playlist"
+	global listenurl
+	putnow "PRIVMSG $chan :\002Stream/Listen\002: $listenurl"
 }
 
+## Command to get Command FAQ
 
-####################################
-## Command to get Command FAQ     ##
-####################################
-
-bind pub -|- !commands commands
 proc commands {nick uhost hand chan arg} {
-	global streamch commands djch main
-	set streamch [string tolower $streamch]
-	if {$chan != $main} {
-		if {$chan == $djch} {
+	global radiochan djchan mainchan
+	set radiochan [string tolower $radiochan]
+	if {$chan != $mainchan} {
+		if {$chan == $djchan} {
 			set a "\002DJ/Admin Commands\002: !rehash !start !login "
 			set b "+cookie -cookie !reqlist !clearlist"
 			set c "\002Radio Commands\002: !listen !np !lp !dj !peak"
@@ -780,15 +573,12 @@ proc commands {nick uhost hand chan arg} {
 	}
 }
 
-####################################
-## Command to submit a request ##
-####################################
+## Command to submit a request
 
-bind pub -|- !request request
 proc request {nick uhost hand chan arg} {
-	global streamch djch reqitem
-	set streamch [string tolower $streamch]
-	if {[string tolower $chan] == "$streamch"} {
+	global radiochan djchan reqitem 
+	set radiochan [string tolower $radiochan]
+	if {[string tolower $chan] == "$radiochan"} {
 		if {[llength $arg]==0} {
 			putnow "PRIVMSG $chan :\002Syntax\002: !request <Artist - Title>"
 		} else {
@@ -816,7 +606,7 @@ proc request {nick uhost hand chan arg} {
 						set query2 "$query2+"
 					}
 				}
-				set a "PRIVMSG $djch :\002\Request\002: $arg | Requested by:\002 "
+				set a "PRIVMSG $djchan :\002\Request\002: $arg | Requested by:\002 "
 				set b "$nick \002 | \002Waffles\002: $query1 | \002What.CD\002: $query2"
 				putnow "$a$b"
 				putnow "NOTICE $nick :\002$arg\002 is succesfully requested"
@@ -831,13 +621,11 @@ proc request {nick uhost hand chan arg} {
 	}
 }
 
-####################################
-##     !log DJ Log Information    ##
-####################################
+##     !log DJ Log Information
 
-bind pub -|- !log getlog
 proc getlog {nick uhost hand chan arg} {
-	set m [mysqlconnect -user username -db database -password password]
+	global dbhost dbuser dbname dbpass
+	set m [mysqlconnect -host $dbhost -user $dbuser -db $dbname -password $dbpass]
 	if {[llength $arg]==0} {
 		set tt_query "SELECT total_time from djlog where dj_name='$nick'"
 		set ts_query "SELECT total_sessions from djlog where dj_name='$nick'"
@@ -860,13 +648,12 @@ proc getlog {nick uhost hand chan arg} {
 	}
 }
 
-####################################
-##  First Save: Name + Onair Time ##
-####################################
+##  First Save: Name + Onair Time
 
 proc startsave {dj} {
+	global dbhost dbuser dbname dbpass
 	set start_time [clock seconds]
-	set m [mysqlconnect -user username -db database -password password]
+	set m [mysqlconnect -host $dbhost -user $dbuser -db $dbname -password $dbpass]
 	set query "SELECT dj_name from session_log order by ID desc limit 1"
 	set result [mysqlsel $m $query -list]
 	set testname [lindex $result 0]
@@ -938,14 +725,12 @@ proc startsave {dj} {
 	}
 }
 
-
-####################################
-## Second: Offair, Session, Total ##I'd 
-####################################
+## Second: Offair, Session, Total
 
 proc finishsave {dj} {
+	global djchan dbhost dbuser dbname dbpass
 	set end_time [clock seconds]
-	set m [mysqlconnect -user username -db database -password password]
+	set m [mysqlconnect -host $dbhost -user $dbuser -db $dbname -password $dbpass]
 	# Checking out the Top-Row's DJ Name
 	set query "SELECT dj_name from session_log order by ID desc limit 1"
 	set result [mysqlsel $m $query -list]
@@ -985,9 +770,9 @@ proc finishsave {dj} {
 		if {$session_time >= 600} {
 			set query "UPDATE djlog set total_time=$newtotal_time where dj_name='$dj'"
 			set result [mysqlexec $m $query]
-			putnow "PRIVMSG #dj : Session Time: $session_time Total Time: $newtotal_time"
+			putnow "PRIVMSG $djchan : Session Time: $session_time Total Time: $newtotal_time"
 		} else {
-			putnow "PRIVMSG #dj : $dj, your session was less than 10 minutes, thus your time was not recorded."
+			putnow "PRIVMSG $djchan : $dj, your session was less than 10 minutes, thus your time was not recorded."
 		}
 		if {$result} {
 			putlog "DJ Database Entry Sent. $dj with $session_time and $newtotal_time"
@@ -995,17 +780,15 @@ proc finishsave {dj} {
 			putlog "Database error."
 		}
 	} else {
-		putnow "PRIVMSG #dj :$dj, you never went on-air, thus your time was not recorded."
+		putnow "PRIVMSG $djchan :$dj, you never went on-air, thus your time was not recorded."
 	}
 }
 
-####################################
-##     Top 5 or $arg of DJ Log    ##
-####################################
+##     Top 5 or $arg of DJ Log
 
-bind pub -|- !topdj toplog
 proc toplog {nick uhost hand chan arg} {
-	set m [mysqlconnect -user username -db database -password password]
+	global dbhost dbuser dbname dbpass
+	set m [mysqlconnect -host $dbhost -user $dbuser -db $dbname -password $dbpass]
 	set name_query "SELECT dj_name from djlog order by total_time desc"
 	set name_result [mysqlsel $m $name_query -list]
 	set tt_query "SELECT total_time from djlog order by total_time desc"
@@ -1041,9 +824,10 @@ proc toplog {nick uhost hand chan arg} {
 	}
 }
 
-bind pub -|- !lst lastsessions
+
 proc lastsessions {nick uhost hand chan arg} {
-	set m [mysqlconnect -user username -db database -password password]
+	global dbhost dbuser dbname dbpass
+	set m [mysqlconnect -host $dbhost -user $dbuser -db $dbname -password $dbpass]
 	set name_query "SELECT dj_name from session_log order by id desc"
 	set name_result [mysqlsel $m $name_query -list]
 	set on_query "SELECT onair_time from session_log order by id desc"
@@ -1079,32 +863,30 @@ proc lastsessions {nick uhost hand chan arg} {
 	}
 }
 
-bind pub -|- !elog elog 
-proc elog {nick uhost hand chan arg} {
-	set errorlog [open "logs/eggdrop.log" r]
-	if {$chan != "#Torrent-Invites"} {
-		# Seperate lines into a list
-		set line [split [read -nonewline $errorlog] "\n"]
-		set line [lreverse $line]
-		if {[llength $arg]== 0} {
-			for {set x 0} {$x < 4} {incr x} {
-				set newline [lindex $line $x]
-				putnow "PRIVMSG $chan :$newline"
-			}
-		} else {
-			for {set x 0} {$x < $arg} {incr x} {
-				set newline [lindex $line $x]
-				puthelp "PRIVMSG $chan :$newline"
-			}
-		}
+## Delete Request Func + Timer
+
+proc deletereq {} {
+	global djchan logchan
+	timer 10 [list deletereq]
+	set filename "requestlist.txt"
+	set fp [open $filename r+]
+	set data [read -nonewline $fp]
+	set lines [split $data "\n"]
+	close $fp
+	set line_to_delete [expr {[llength $lines] - 1}]
+	set lines [lreplace $lines $line_to_delete $line_to_delete]
+	set fp [open $filename w+]
+	if {[gets $fp data] >= 1} {
+		puts -nonewline $fp $lines
+		close $fp
+	} else {
+		puts -nonewline $fp [join $lines "\n"]
+		close $fp
 	}
+	putnow "PRIVMSG $logchan :Deleting a Request"
 }
 
-
-
-####################################
-##  Calculate Seconds to D:H:M:S  ##
-####################################
+##  Calculate Seconds to D:H:M:S
 
 proc duration { int_time } {
 	set timeList [list]
@@ -1120,40 +902,77 @@ proc duration { int_time } {
 	return [join $timeList]
 }
 
+## Advert if Offline->RealDJ
 
-bind pub -|- !duration duracommand
-proc duracommand {nick uhost hand chan arg} {
-	if {!$arg} {
-	} else {
-		set timeList [list]
-		foreach div {604800 86400 3600 60 1} mod {0 7 24 60 60} name {wk day hr min sec} {
-			set n [expr {$arg / $div}]
-			if {$mod > 0} {set n [expr {$n % $mod}]}
-			if {$n > 1} {
-				lappend timeList "$n ${name}s"
-			} elseif {$n == 1} {
-				lappend timeList "$n $name"
-			}
-		}
-		set duration [join $timeList]
-		putnow "PRIVMSG $chan :$duration"
+proc onair {} {
+	global radiochan djchan dj newdj mainchan
+	set a "\002$newdj\002 - Is Now Broadcasting Live! Tune "
+	set b "in @ http://216.104.37.26:9005/listen.pls"
+	set c "$newdj is now ON AIR @ "
+	set d "#TI-Radio (http://216.104.37.26:9005/listen.pls)"
+	set e "Torrent-Invites Radio || Status: DJ On Air || $newdj Is Now Broadcasting || "
+	set f "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
+	putnow "PRIVMSG $radiochan : $a$b"
+	putnow "PRIVMSG $djchan :\002ON AIR\002: $newdj is now ON AIR."
+	putnow "PRIVMSG $mainchan : $c$d"
+	putnow "TOPIC $radiochan : $e$f"
+}
+
+## Advert if RealDJ->RealDJ
+
+proc tempoffair {} {
+	global radiochan djchan dj
+	set radiochan [string tolower $radiochan]
+	if {$dj != 0} {
+		putnow "PRIVMSG $radiochan :\002OFF AIR\002: $dj is now OFF AIR."
+		putnow "PRIVMSG $djchan :\002OFF AIR\002: $dj is now OFF AIR."
 	}
 }
 
-bind pub -|- !math math_operands
-proc math_operands {nick uhost hand chan arg} {
-	if {$chan != "#Torrent-Invites"} {
-		if {$arg == "operands"} {
-			putnow "PRIVMSG $chan : Subtract: -  \002|\002 Add: + \002|\002 Bit-Wise NOT: ~ \002|\002 Logical NOT: ! \002|\002"
-			putnow "PRIVMSG $chan : Multiply: * \002|\002 Divide: / \002|\002 Remainder: % \002|\002 Exponent: **  \002|\002 Example: 2**4 \002|\002"
-			putnow "PRIVMSG $chan : Less: < \002|\002 Greater: > \002|\002 Less than or Equal: <= \002|\002 Greater than or Equal: >= \002|\002"
-			putnow "PRIVMSG $chan : Bitwise AND: & \002|\002 Bitwise Exclusive OR: ^ \002|\002 Bitwise OR: | \002|\002 And: && \002|\002 OR: || \002|\002 "
-		} elseif {$arg == "functions"} {
-			putnow "PRIVMSG $chan : abs acos asin atan atan2 bol ceil cos cosh double entier exp floor "
-			putnow "PRIVMSG $chan : fmod hypot int isqrt log log10 max min pow rand round "
-			putnow "PRIVMSG $chan : sin sinh sqrt srand tan tanh wide"
-		}
-	}
+## Advert if Offline->AutoDJ
+
+proc autodjon {} {
+	global radiochan
+	set radiochan [string tolower $radiochan]
+	set a "Torrent-Invites Radio || Status: AutoDJ ||"
+	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
+	putnow "TOPIC $radiochan : $a$b"
+}
+
+## Advert if Someone->Offline
+
+proc serveroffline {} {
+	global radiochan
+	set radiochan [string tolower $radiochan]
+	set a "Torrent-Invites Radio || Status: Stream Offline ||"
+	set b " URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
+	putnow "TOPIC $radiochan : $a$b"
+}
+
+## Advert if RealDJ->AutoDJ
+
+proc autooffair {} {
+	global radiochan djchan dj
+	set radiochan [string tolower $radiochan]
+	set a "Torrent-Invites Radio || Status: AutoDJ || "
+	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
+	putnow "PRIVMSG $radiochan :\002OFF AIR\002: $dj is now OFF AIR."
+	putnow "PRIVMSG $djchan :\002OFF AIR\002: $dj is now OFF AIR."
+	putnow "TOPIC $radiochan : $a$b"
+
+}
+
+## Advert if Server if Offline
+
+proc offair {} {
+	global radiochan djchan dj
+	set radiochan [string tolower $radiochan]
+	set a "Torrent-Invites Radio || Status: Stream Offline || "
+	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
+	putnow "PRIVMSG $radiochan :\002OFF AIR\002: $dj is now OFF AIR."
+	putnow "PRIVMSG $djchan :\002OFF AIR\002: $dj is now OFF AIR."
+	putnow "PRIVMSG $djchan :\00304$dj, please remember to \002TURN ON AUTODJ\002 \00304"
+	putnow "TOPIC $radiochan : $a$b"
 }
 
 putlog "Radio Script loaded..        | 1"
