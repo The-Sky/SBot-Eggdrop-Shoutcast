@@ -36,9 +36,11 @@ Table of Contents
 2. Working with the Variables
 -----------------
 
-- **$siteurl**
-- **$listenurl**
-- **$last played**
+Shoutcast Website Variables:
+
+- **$siteurl** - Your Main Shoutcast Website URL
+- **$listenurl** - Your Listen Url (listen.pls usually)
+- **$last played** - Your Last Played URL (played.html usually)
 
 MySQL Variables:
 
@@ -100,7 +102,7 @@ Anything else is up to you.
 ```
 <style type="text/css">
 table.hovertable {
-  margin-left: 20px;
+	margin-left: 20px;
 	font-family: verdana,arial,sans-serif;
 	font-size:13px;
 	color:#ffffff;
