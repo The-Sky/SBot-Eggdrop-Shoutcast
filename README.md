@@ -1,6 +1,6 @@
 ## SBot: ReadMe ##
 
-**SBot** is a shoucast radio bot that was built inside Eggdrop using TCL. It is semi-easily configurable and has a large amount of features.
+**SBot** is a shoutcast radio bot that was built inside Eggdrop using TCL. It is semi-easily configurable and has a large amount of features.
 
 Written by: Sky
 
