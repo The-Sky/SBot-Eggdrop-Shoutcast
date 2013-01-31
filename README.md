@@ -89,6 +89,16 @@ CREATE TABLE `session_log` (
 -----------------
 I have provided some PHP to show your DJ/Session logs on a website. You will find it in the file named **djlog.php**.
 
+All you really need to edit is the following variables (and add a layout around it):
+
+- **$hostname** - Your Database Hostname / IP
+- **$username** - Your Database Username
+- **$password** - Your Database Password
+- **$database** - Your Database Name
+
+Anything else is up to you.
+
+
 ```
 				<div class="title">DJ Sessions and Top DJ's</div>
 					<?php
@@ -188,15 +198,6 @@ I have provided some PHP to show your DJ/Session logs on a website. You will fin
 				</table>
 			</div>
 ```
-
-All you really need to edit is the following variables (and add a layout around it):
-
-- **$hostname** - Your Database Hostname / IP
-- **$username** - Your Database Username
-- **$password** - Your Database Password
-- **$database** - Your Database Name
-
-Anything else is up to you.
 
 6. CSS for PHP Tables
 -----------------
