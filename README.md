@@ -12,6 +12,7 @@ Table of Contents
 3. Different Channels Function
 4. MySQL Database
 5. PHP for DJ Logs
+6. CSS for PHP Tables
 
 1. Command List
 -----------------
