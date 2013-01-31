@@ -52,13 +52,15 @@ Table of Contents
 # 
 Creating the DJ Log Table:
 
-```CREATE TABLE `djlog` (
+```
+CREATE TABLE `djlog` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `dj_name` varchar(30) DEFAULT NULL,
   `total_time` bigint(255) DEFAULT NULL,
   `total_sessions` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-)```
+)
+```
 
 # 
 
