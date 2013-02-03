@@ -88,7 +88,7 @@ proc start {} {
 	#Starting Advertisment Timer
 		#run_periodically #TI-Radio
 	#Starting Advertisement Timer
-		#run_periodically #Torrent-Invites
+		#run_periodically #
 	#Starting Delete Request Timer
 		deletereq
 		set firstad 0
@@ -102,7 +102,7 @@ proc start {} {
 	#Starting Check Peak Timer
 		maxlisteners
 	#Starting Advertisment Timer
-		#run_periodically #Torrent-Invites
+		#run_periodically #
 	#Starting Advertisement Timer
 		#run_periodically #TI-Radio
 	#Starting Delete Request Timer
@@ -881,7 +881,7 @@ proc onair {} {
 	set b "in @ http://216.104.37.26:9005/listen.pls"
 	set c "$newdj is now ON AIR @ "
 	set d "#TI-Radio (http://216.104.37.26:9005/listen.pls)"
-	set e "Torrent-Invites Radio || Status: DJ On Air || $newdj Is Now Broadcasting || "
+	set e "Radio || Status: DJ On Air || $newdj Is Now Broadcasting || "
 	set f "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
 	putnow "PRIVMSG $radiochan : $a$b"
 	putnow "PRIVMSG $djchan :\002ON AIR\002: $newdj is now ON AIR."
@@ -903,7 +903,7 @@ proc tempoffair {} {
 proc autodjon {} {
 	global radiochan
 	set radiochan [string tolower $radiochan]
-	set a "Torrent-Invites Radio || Status: AutoDJ ||"
+	set a "Radio || Status: AutoDJ ||"
 	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
 	putnow "TOPIC $radiochan : $a$b"
 }
@@ -912,7 +912,7 @@ proc autodjon {} {
 proc serveroffline {} {
 	global radiochan
 	set radiochan [string tolower $radiochan]
-	set a "Torrent-Invites Radio || Status: Stream Offline ||"
+	set a "Radio || Status: Stream Offline ||"
 	set b " URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
 	putnow "TOPIC $radiochan : $a$b"
 }
@@ -921,7 +921,7 @@ proc serveroffline {} {
 proc autooffair {} {
 	global radiochan djchan dj
 	set radiochan [string tolower $radiochan]
-	set a "Torrent-Invites Radio || Status: AutoDJ || "
+	set a "Radio || Status: AutoDJ || "
 	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
 	putnow "PRIVMSG $radiochan :\002OFF AIR\002: $dj is now OFF AIR."
 	putnow "PRIVMSG $djchan :\002OFF AIR\002: $dj is now OFF AIR."
@@ -933,7 +933,7 @@ proc autooffair {} {
 proc offair {} {
 	global radiochan djchan dj
 	set radiochan [string tolower $radiochan]
-	set a "Torrent-Invites Radio || Status: Stream Offline || "
+	set a "Radio || Status: Stream Offline || "
 	set b "URL: http://216.104.37.26:9005/listen.pls || Want to be a DJ?: http://bit.ly/J6cWtN"
 	putnow "PRIVMSG $radiochan :\002OFF AIR\002: $dj is now OFF AIR."
 	putnow "PRIVMSG $djchan :\002OFF AIR\002: $dj is now OFF AIR."
